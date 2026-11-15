@@ -9,3 +9,4 @@ photo_cache.json
 frontend/node_modules/
 frontend/dist/
 .DS_Store
+info/*.mp4

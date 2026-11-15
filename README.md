@@ -1,8 +1,6 @@
 # Nestfix
 
-[![NestFix — Helping employees find home, helping employers keep talent](info/image.jpg)](info/NestFix_Intro_v2.mp4)
-
-[Watch the intro](info/NestFix_Intro_v2.mp4)
+![NestFix — Helping employees find home, helping employers keep talent](info/Overview.jpg)
 
 Nestfix helps an employer put money toward housing and show each employee real rentals they can afford after that help. Listings come from Bright Data. Explanations come from Gemini.
 
