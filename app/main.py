@@ -1,10 +1,12 @@
 import logging
 import time
 from contextlib import asynccontextmanager
-from typing import Any, Dict
+from pathlib import Path
+from typing import Any, Dict, Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 from app.database import Base, SessionLocal, engine
 from app.routers import employees, employers, housing
@@ -18,7 +20,24 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 logger = logging.getLogger("nestfix")
 
+FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 _status_cache: Dict[str, Any] = {"checked_at": 0, "payload": None}
+
+
+def _frontend_ready() -> bool:
+    return (FRONTEND_DIST / "index.html").is_file()
+
+
+def _frontend_file(full_path: str) -> Optional[Path]:
+    root = FRONTEND_DIST.resolve()
+    candidate = (root / full_path).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError:
+        return None
+    if candidate.is_file():
+        return candidate
+    return None
 
 
 @asynccontextmanager
@@ -56,7 +75,10 @@ app.include_router(housing.router, prefix="/housing", tags=["housing"])
 
 
 @app.get("/")
-def root() -> Dict[str, str]:
+def root() -> Any:
+    index = FRONTEND_DIST / "index.html"
+    if index.is_file():
+        return FileResponse(index)
     return {"name": "Nestfix", "docs": "/docs", "health": "/health"}
 
 
@@ -69,3 +91,14 @@ def health() -> Dict[str, Any]:
         _status_cache["payload"] = {"bright_data": bright, "gemini": gemini}
         _status_cache["checked_at"] = now
     return {"status": "ok", "integrations": _status_cache["payload"]}
+
+
+@app.get("/{full_path:path}")
+def frontend(full_path: str) -> FileResponse:
+    """Serve the built site. Client-side pages such as /admin fall back to index.html."""
+    if not _frontend_ready():
+        raise HTTPException(status_code=404, detail="Not found")
+    found = _frontend_file(full_path)
+    if found is not None:
+        return FileResponse(found)
+    return FileResponse(FRONTEND_DIST / "index.html")
