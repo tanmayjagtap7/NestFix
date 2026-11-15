@@ -93,7 +93,7 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Edit `.env`:
+Edit `.env` on your machine. That file stays off Git. The same two names are repository secrets for GitHub Actions:
 
 - `GEMINI_API_KEY` — a Google AI Studio key. New keys start with `AQ.`. Older keys start with `AIza`.
 - `BRIGHT_DATA_API_KEY` — a Bright Data API token.
@@ -123,6 +123,23 @@ npm run dev
 ```
 
 Open http://127.0.0.1:5173. API docs are at http://127.0.0.1:8000/docs.
+
+## Demo script
+
+Use this order with judges. Live collection usually takes one to three minutes. Start it, then talk.
+
+1. Open the home page. Point at the three steps and the Harborlight card.
+2. Open **Employer**. Show the five staff rows and the contribution column. Maya Chen is a $600 monthly subsidy. Jordan Hale is 15% of rent. Luis Ortega is one-time assistance spread over 12 months.
+3. Optional: upload `sample_employees.csv` (also linked on the page) to show the CSV path. Re-uploading updates the same employee ids.
+4. Click **Find homes** on Maya Chen (`HL-1042`, Austin, family of 3, toddler, 2 bedrooms). Leave the loading note on screen. Bright Data is collecting Zillow rentals and Google Maps places.
+5. When the row says homes are ready, click **Open their view**.
+6. On Maya’s page, start on **Net price**. The large number is rent after Harborlight’s subsidy. Switch on **Show employer contribution** and point at sticker, employer share, and net.
+7. Read the “why this fits” line out loud. It should name Maya, Austin, her household, and the subsidy. Pros and cons sit under it. Schools, walk score, or parks come from the Bright Data record.
+8. Open **Open listing source** so the room can see the live Zillow page.
+9. In the affordability panel, set other monthly expenses to `3200` and desired savings to `700`. Click **Apply to rankings**. Homes that no longer fit drop down and are marked over budget. Rank labels show the move (`#2 · was #1`). Check **Hide homes over this budget** to filter.
+10. Select a home and add a short note, for example “Close to a park for the toddler.”
+11. Return to **Employer** and show **What staff selected**: address, sticker, employer share, and net.
+12. If there is time, open Priya Nair (`HL-1180`, Austin, two children, $800 subsidy). Her notes ask for an elementary school, which is the amenity beat. Her homes are ordered by miles from the Harborlight office.
 
 ## Bright Data
 
