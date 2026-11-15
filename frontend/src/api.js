@@ -57,6 +57,8 @@ export function api(path, options = {}) {
 export const getHealth = () => api("/health");
 export const getEmployers = () => api("/employers");
 export const createEmployer = (body) => api("/employers", { method: "POST", body: JSON.stringify(body) });
+export const updateEmployer = (employerId, body) =>
+  api(`/employers/${employerId}`, { method: "PATCH", body: JSON.stringify(body) });
 export const getEmployees = (employerId) => api(`/employers/${employerId}/employees`);
 export const getSummary = (employerId) => api(`/employers/${employerId}/selections-summary`);
 export const uploadCsv = (employerId, file) => {
@@ -82,6 +84,7 @@ export const affordability = (employeeId, body) =>
   api(`/employees/${employeeId}/affordability-calc`, { method: "POST", body: JSON.stringify(body) });
 export const getLogs = (employeeId) => api(`/employees/${employeeId}/logs`);
 export const getOption = (optionId) => api(`/housing/options/${optionId}`);
+export const getPropertyPhotos = (optionId) => api(`/housing/options/${optionId}/photos`);
 export const getQuestions = (optionId) => api(`/housing/options/${optionId}/questions`);
 export const askAboutHome = (optionId, question) =>
   api(`/housing/options/${optionId}/ask`, { method: "POST", body: JSON.stringify({ question }) });

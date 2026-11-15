@@ -108,7 +108,7 @@ function toPayload(person) {
 
 export default function NewCompany() {
   const navigate = useNavigate();
-  const [company, setCompany] = useState({ company_name: "", contact_email: "" });
+  const [company, setCompany] = useState({ company_name: "", contact_email: "", work_location: "" });
   const [people, setPeople] = useState([blankPerson()]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -202,6 +202,16 @@ export default function NewCompany() {
                 className="mt-1 w-full rounded-xl border border-sand px-3 py-2 text-sm text-ink"
                 value={company.contact_email}
                 onChange={(event) => setCompany({ ...company, contact_email: event.target.value })}
+              />
+            </label>
+            <label className="text-xs text-ink/60 sm:col-span-2">
+              Workplace
+              <input
+                required
+                className="mt-1 w-full rounded-xl border border-sand px-3 py-2 text-sm text-ink"
+                placeholder="2100 E St Elmo Rd, Austin, TX 78744"
+                value={company.work_location}
+                onChange={(event) => setCompany({ ...company, work_location: event.target.value })}
               />
             </label>
           </div>

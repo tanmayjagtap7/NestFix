@@ -107,6 +107,7 @@ class GeminiService:
                     "schools_on_listing": [school.get("name") for school in listing.get("schools") or []],
                     "getting_around": listing.get("transit"),
                     "neighborhoods": listing.get("neighborhoods"),
+                    "miles_from_work": listing.get("miles_from_work"),
                 }
             )
         compact_amenities = {
@@ -119,7 +120,8 @@ class GeminiService:
         return (
             "You are Nestfix, advising one employee on real rental listings their employer collected.\n"
             "Use only the employee facts and listing facts below. Do not invent prices, addresses, or amenities.\n"
-            "Explain the fit for THIS person: name, salary, family size, children, city, commute, and contribution.\n"
+            "Explain the fit for THIS person: name, salary, family size, children, city, workplace, and contribution.\n"
+            "When miles_from_work is present, a smaller number is closer to the company workplace. Prefer those homes when the rent still fits, and mention the miles.\n"
             "Return JSON with this shape:\n"
             "{\n"
             '  "amenities": {"summary": "2-3 sentences about the neighborhood for this household"},\n'

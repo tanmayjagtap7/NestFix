@@ -9,11 +9,13 @@ from app.models import Employee, EmployeeSelection, Employer, HousingOption
 from app.schemas import (
     EmployerCreate,
     EmployerOut,
+    EmployerUpdate,
     EmployeeOut,
     SelectionsSummary,
     SelectionSummaryItem,
     UploadResult,
 )
+from app.services.geo import apply_workplace
 from app.services.ingest import IngestError, parse_csv, upsert_employees
 
 router = APIRouter()
@@ -45,6 +47,7 @@ def create_employer(body: EmployerCreate, db: Session = Depends(get_db)) -> Empl
     if "@" not in body.contact_email:
         raise HTTPException(status_code=400, detail="contact_email needs to be an email address.")
     employer = Employer(company_name=body.company_name.strip(), contact_email=body.contact_email.strip())
+    apply_workplace(employer, body.work_location)
     db.add(employer)
     db.commit()
     db.refresh(employer)
@@ -112,6 +115,18 @@ async def upload_employees(request: Request, db: Session = Depends(get_db)) -> U
         updated=updated,
         employees=[_employee_out(employee, counts.get(employee.id, 0)) for employee in employees],
     )
+
+
+@router.patch("/{employer_id}", response_model=EmployerOut)
+def update_employer(employer_id: int, body: EmployerUpdate, db: Session = Depends(get_db)) -> Employer:
+    employer = db.get(Employer, employer_id)
+    if employer is None:
+        raise HTTPException(status_code=404, detail="Employer not found.")
+    apply_workplace(employer, body.work_location)
+    db.add(employer)
+    db.commit()
+    db.refresh(employer)
+    return employer
 
 
 @router.get("/{employer_id}", response_model=EmployerOut)

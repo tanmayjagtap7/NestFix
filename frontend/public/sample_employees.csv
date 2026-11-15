@@ -1,6 +1,6 @@
 employee_id,full_name,email,annual_salary,family_size,num_children,preferred_city,max_commute_minutes,min_bedrooms,other_notes,contribution_type,contribution_amount,contribution_duration_months
 HL-1042,Maya Chen,maya.chen@harborlight.example,92000,3,1,"Austin, TX",30,2,Toddler in the household. A park or small yard nearby matters more than a brand-new building.,monthly_subsidy,600,12
-HL-1108,Jordan Hale,jordan.hale@harborlight.example,145000,1,0,"Seattle, WA",25,1,Night-shift schedule. A quiet street and a short commute matter most.,percent_of_rent,15,12
-HL-1180,Priya Nair,priya.nair@harborlight.example,78000,4,2,"Denver, CO",35,3,Two school-age children. Needs an elementary school nearby and space for homework.,monthly_subsidy,800,12
+HL-1108,Jordan Hale,jordan.hale@harborlight.example,145000,1,0,"Austin, TX",25,1,Night-shift schedule. A quiet street and a short commute matter most.,percent_of_rent,15,12
+HL-1180,Priya Nair,priya.nair@harborlight.example,78000,4,2,"Austin, TX",35,3,Two school-age children. Needs an elementary school nearby and space for homework.,monthly_subsidy,800,12
 HL-1215,Luis Ortega,luis.ortega@harborlight.example,64000,2,0,"Austin, TX",40,1,First apartment with a partner who works downtown. Keep the monthly payment predictable.,one_time_assistance,4800,12
-HL-1302,Amina Diallo,amina.diallo@harborlight.example,110000,5,3,"Seattle, WA",40,3,Three children. Wants a bus or light-rail ride to the warehouse campus.,monthly_subsidy,1000,12
+HL-1302,Amina Diallo,amina.diallo@harborlight.example,110000,5,3,"Austin, TX",40,3,Three children. Wants a bus or light-rail ride to the warehouse campus.,monthly_subsidy,1000,12

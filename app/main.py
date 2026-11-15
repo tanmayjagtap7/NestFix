@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, SessionLocal, engine
 from app.routers import employees, employers, housing
 from app.seed import seed_if_empty
+from app.services.geo import ensure_employer_columns, place_default_workplace
 from app.services.bright_data_service import BrightDataService
 from app.services.gemini_service import GeminiService
 
@@ -23,9 +24,11 @@ _status_cache: Dict[str, Any] = {"checked_at": 0, "payload": None}
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    ensure_employer_columns()
     db = SessionLocal()
     try:
         seed_if_empty(db)
+        place_default_workplace(db)
     finally:
         db.close()
     yield

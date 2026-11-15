@@ -11,7 +11,11 @@ SAMPLE_CSV = Path(__file__).resolve().parents[1] / "sample_employees.csv"
 def seed_if_empty(db: Session) -> None:
     if db.query(Employer).first() is not None:
         return
-    employer = Employer(company_name="Harborlight Logistics", contact_email="people@harborlight.example")
+    employer = Employer(
+        company_name="Harborlight Logistics",
+        contact_email="people@harborlight.example",
+        work_location="2100 E St Elmo Rd, Austin, TX 78744",
+    )
     db.add(employer)
     db.commit()
     db.refresh(employer)

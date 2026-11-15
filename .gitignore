@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *.db
 place_cache.json
+photo_cache.json
 .pytest_cache/
 frontend/node_modules/
 frontend/dist/

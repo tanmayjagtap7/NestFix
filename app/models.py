@@ -13,6 +13,9 @@ class Employer(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     company_name: Mapped[str] = mapped_column(String(200), nullable=False)
     contact_email: Mapped[str] = mapped_column(String(255), nullable=False)
+    work_location: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
+    work_latitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    work_longitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
     employees: Mapped[List["Employee"]] = relationship(back_populates="employer")
 

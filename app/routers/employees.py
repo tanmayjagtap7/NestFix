@@ -20,10 +20,24 @@ from app.schemas import (
     SelectionOut,
 )
 from app.services.affordability import monthly_gross, rule_of_thumb_budget
+from app.services.geo import distance_miles
 from app.services.lookup import resolve_employee
 from app.services.matching_service import rank_with_calculator
 
 router = APIRouter()
+
+
+def _miles_from_work(option: HousingOption):
+    employer = option.employee.employer if option.employee is not None else None
+    data = option.listing_data or {}
+    if employer is None:
+        return None
+    return distance_miles(
+        employer.work_latitude,
+        employer.work_longitude,
+        data.get("latitude"),
+        data.get("longitude"),
+    )
 
 
 def _option_out(option: HousingOption) -> HousingOptionOut:
@@ -32,6 +46,11 @@ def _option_out(option: HousingOption) -> HousingOptionOut:
         payload["employer_monthly_cover"] = round(option.price - option.net_price, 2)
     elif option.listing_data and option.listing_data.get("employer_monthly_cover") is not None:
         payload["employer_monthly_cover"] = option.listing_data.get("employer_monthly_cover")
+    miles = _miles_from_work(option)
+    if miles is not None:
+        listing = dict(payload.get("listing_data") or {})
+        listing["miles_from_work"] = miles
+        payload["listing_data"] = listing
     return HousingOptionOut(**payload)
 
 
@@ -42,14 +61,20 @@ def _employee_out(employee) -> EmployeeOut:
     payload["options_count"] = len(employee.housing_options) if employee.housing_options is not None else 0
     payload["selected_option_id"] = selection.housing_option_id if selection else None
     payload["selected_address"] = option.address if option else None
+    employer = employee.employer
+    if employer is not None:
+        payload["employer_name"] = employer.company_name
+        payload["work_location"] = employer.work_location
     return EmployeeOut(**payload)
 
 
 def _options_response(employee) -> OptionsResponse:
     options = sorted(
         employee.housing_options,
-        key=lambda option: int((option.gemini_analysis or {}).get("score") or 0),
-        reverse=True,
+        key=lambda option: (
+            _miles_from_work(option) if _miles_from_work(option) is not None and _miles_from_work(option) <= 80 else 10**6,
+            -int((option.gemini_analysis or {}).get("score") or 0),
+        ),
     )
     analysis = options[0].gemini_analysis if options else {}
     return OptionsResponse(

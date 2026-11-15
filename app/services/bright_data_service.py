@@ -381,6 +381,59 @@ class BrightDataService:
         logger.info("Place lookup %s snapshot %s returned %s places", key, snapshot, len(places))
         return places
 
+    def listing_images(self, source_url: str) -> Dict[str, Any]:
+        """Photos from a listing page. Resumes a collection already in progress."""
+        url = str(source_url or "").strip()
+        if not url or not self.api_key:
+            return {"photos": [], "pending": False}
+        cache = self._read_photo_cache()
+        entry = cache.get(url) if isinstance(cache.get(url), dict) else {}
+        stored = entry.get("photos") if isinstance(entry.get("photos"), list) else []
+        if stored:
+            return {"photos": stored[:8], "pending": False}
+        snapshot = entry.get("snapshot_id")
+        if not snapshot:
+            try:
+                snapshot = self._trigger(self.zillow_listings_dataset, [{"url": url}])
+            except BrightDataError as exc:
+                logger.warning("Listing photo collection did not start: %s", exc)
+                return {"photos": [], "pending": False}
+            cache[url] = {"snapshot_id": snapshot, "photos": []}
+            self._write_photo_cache(cache)
+            return {"photos": [], "pending": True}
+        try:
+            progress = self._request("GET", f"/datasets/v3/progress/{snapshot}", timeout=20)
+        except BrightDataError as exc:
+            logger.warning("Listing photo progress failed: %s", exc)
+            return {"photos": [], "pending": True}
+        status = str(progress.get("status") or "")
+        if status != "ready":
+            if status in {"failed", "error", "canceled", "cancelled"}:
+                logger.warning("Listing photo snapshot %s failed", snapshot)
+                return {"photos": [], "pending": False}
+            return {"photos": [], "pending": True}
+        records = self._flatten(self._download_snapshot(snapshot))
+        photos = _image_urls(records[0]) if records else []
+        cache[url] = {"snapshot_id": snapshot, "photos": photos}
+        self._write_photo_cache(cache)
+        return {"photos": photos, "pending": False}
+
+    def _photo_cache_path(self) -> Path:
+        return Path(__file__).resolve().parents[2] / "photo_cache.json"
+
+    def _read_photo_cache(self) -> Dict[str, Any]:
+        path = self._photo_cache_path()
+        if not path.exists():
+            return {}
+        try:
+            data = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError):
+            return {}
+        return data if isinstance(data, dict) else {}
+
+    def _write_photo_cache(self, data: Dict[str, Any]) -> None:
+        self._photo_cache_path().write_text(json.dumps(data))
+
     def _place_cache_path(self) -> Path:
         return Path(__file__).resolve().parents[2] / "place_cache.json"
 
@@ -513,6 +566,7 @@ class BrightDataService:
                     "kind": kind,
                     "note": " · ".join(note_bits),
                     "url": url if isinstance(url, str) and url.startswith("http") else "",
+                    "image": _image_url(rec) or "",
                     "rating": rating if rating not in (None, "") else None,
                     "address": address or "",
                     "lat": lat,
@@ -592,6 +646,7 @@ class BrightDataService:
             "bathrooms": baths,
             "sqft": _sqft_from_text(text),
             "image_url": item.get("image") if isinstance(item.get("image"), str) and str(item.get("image")).startswith("http") else None,
+            "image_urls": [item.get("image")] if isinstance(item.get("image"), str) and str(item.get("image")).startswith("http") else [],
             "description": snippet[:500],
             "home_type": None,
             "schools": [],
@@ -691,7 +746,8 @@ class BrightDataService:
             "bedrooms": beds,
             "bathrooms": baths,
             "sqft": sqft if sqft and sqft > 50 else _as_number(rec.get("sqft")),
-            "image_url": _image_url(rec),
+            "image_url": (_image_urls(rec) or [None])[0],
+            "image_urls": _image_urls(rec),
             "description": description[:500],
             "home_type": _first(rec, "homeType", "home_type", "propertyType"),
             "schools": _schools(rec),
@@ -832,20 +888,69 @@ def _address_from_title(title: str) -> Optional[str]:
 
 
 def _image_url(rec: Dict[str, Any]) -> Optional[str]:
+    found = _image_urls(rec)
+    return found[0] if found else None
+
+
+def _largest_image(group: List[Any]) -> Optional[str]:
+    best = None
+    best_width = -1
+    for item in group:
+        if isinstance(item, str) and item.startswith("http"):
+            candidate, width = item, 0
+        elif isinstance(item, dict):
+            candidate = item.get("url") or item.get("src")
+            width = item.get("width") or 0
+            try:
+                width = int(width)
+            except (TypeError, ValueError):
+                width = 0
+            if not isinstance(candidate, str) or not candidate.startswith("http"):
+                continue
+        else:
+            continue
+        if width >= best_width:
+            best, best_width = candidate, width
+    return best
+
+
+def _image_urls(rec: Dict[str, Any]) -> List[str]:
+    urls: List[str] = []
+
+    def add(value: Any) -> None:
+        if isinstance(value, str) and value.startswith("http") and value not in urls and len(urls) < 8:
+            urls.append(value)
+
+    def add_photo(photo: Any) -> None:
+        if isinstance(photo, str):
+            add(photo)
+            return
+        if not isinstance(photo, dict):
+            return
+        mixed = photo.get("mixedSources") or photo.get("mixed_sources")
+        if isinstance(mixed, dict):
+            for fmt in ("jpeg", "jpg", "webp"):
+                group = mixed.get(fmt)
+                if isinstance(group, list) and group:
+                    add(_largest_image(group))
+                    return
+            for group in mixed.values():
+                if isinstance(group, list) and group:
+                    add(_largest_image(group))
+                    return
+        add(photo.get("hiRes") or photo.get("hires") or photo.get("url") or photo.get("src") or photo.get("href"))
+
     for key in ("imgSrc", "image", "photo", "main_image", "primary_photo"):
-        value = rec.get(key)
-        if isinstance(value, str) and value.startswith("http"):
-            return value
-    photos = rec.get("photos") or rec.get("images") or []
-    if isinstance(photos, list):
+        add(rec.get(key))
+    for key in ("photos", "images", "responsivePhotos", "responsive_photos"):
+        photos = rec.get(key)
+        if not isinstance(photos, list):
+            continue
         for photo in photos:
-            if isinstance(photo, str) and photo.startswith("http"):
-                return photo
-            if isinstance(photo, dict):
-                url = photo.get("url") or photo.get("mixedSources")
-                if isinstance(url, str) and url.startswith("http"):
-                    return url
-    return None
+            add_photo(photo)
+            if len(urls) >= 8:
+                return urls
+    return urls
 
 
 def _schools(rec: Dict[str, Any]) -> List[Dict[str, str]]:

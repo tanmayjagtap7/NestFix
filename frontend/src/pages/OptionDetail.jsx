@@ -3,8 +3,16 @@ import { Link, useParams } from "react-router-dom";
 import { bedsLabel, getEmployee, getOption, money, selectOption } from "../api";
 import HomeQuestions from "../components/HomeQuestions";
 import MapFrame from "../components/MapFrame";
+import PropertyPhotos from "../components/PropertyPhotos";
 import NearbyPlaces from "../components/NearbyPlaces";
 import PriceSplit from "../components/PriceSplit";
+
+function milesFromWork(place, orgName) {
+  const miles = Number(place?.miles_from_work);
+  if (!Number.isFinite(miles) || miles > 80) return "";
+  const shown = miles < 10 ? miles.toFixed(1) : String(Math.round(miles));
+  return `${shown} miles from ${orgName || "the office"}`;
+}
 
 export default function OptionDetail() {
   const { optionId } = useParams();
@@ -52,17 +60,21 @@ export default function OptionDetail() {
         {option.bathrooms ? ` · ${option.bathrooms} bath` : ""}
         {option.sqft ? ` · ${Math.round(option.sqft).toLocaleString()} sq ft` : ""}
       </p>
+      {milesFromWork(option.listing_data, employee?.employer_name) && (
+        <p className="mt-2 text-sm text-pine">{milesFromWork(option.listing_data, employee?.employer_name)}</p>
+      )}
       <p className="mt-4 text-xs uppercase tracking-wider text-ink/45">You pay each month</p>
       <p className="font-display text-5xl">{money(option.net_price)}</p>
       <div className="mt-4">
         <PriceSplit listed={option.price} employerPays={option.employer_monthly_cover} youPay={option.net_price} size="lg" />
       </div>
-      <div className="mt-4 overflow-hidden rounded-3xl border border-sand">
+      <div className="mt-4 overflow-hidden rounded-3xl border border-sand bg-white p-3">
+        <PropertyPhotos optionId={option.id} listing={option.listing_data} />
         <MapFrame
           address={option.address}
           lat={option.listing_data?.latitude}
           lng={option.listing_data?.longitude}
-          className="h-72"
+          className="mt-4 h-72"
         />
         <NearbyPlaces
           detailed

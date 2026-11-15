@@ -7,6 +7,11 @@ from pydantic import BaseModel, ConfigDict, Field
 class EmployerCreate(BaseModel):
     company_name: str = Field(min_length=2, max_length=200)
     contact_email: str
+    work_location: str = Field(min_length=3, max_length=300)
+
+
+class EmployerUpdate(BaseModel):
+    work_location: str = Field(min_length=3, max_length=300)
 
 
 class EmployerOut(BaseModel):
@@ -15,6 +20,9 @@ class EmployerOut(BaseModel):
     id: int
     company_name: str
     contact_email: str
+    work_location: Optional[str] = None
+    work_latitude: Optional[float] = None
+    work_longitude: Optional[float] = None
 
 
 class EmployeeIn(BaseModel):
@@ -68,6 +76,8 @@ class EmployeeOut(BaseModel):
     options_count: int = 0
     selected_option_id: Optional[int] = None
     selected_address: Optional[str] = None
+    employer_name: Optional[str] = None
+    work_location: Optional[str] = None
 
 
 class UploadResult(BaseModel):

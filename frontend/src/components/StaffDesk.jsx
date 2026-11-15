@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { downloadChoices, generateOptions, getEmployees, getEmployers, getSummary, money, updateEmployee, uploadCsv, uploadJson } from "../api";
+import { downloadChoices, generateOptions, getEmployees, getEmployers, getSummary, money, updateEmployee, updateEmployer, uploadCsv, uploadJson } from "../api";
 import { helpLine, monthlyHelp } from "./PriceSplit";
 
 const EMPTY_FORM = {
@@ -29,10 +29,14 @@ export default function StaffDesk({ employerId }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [workLocation, setWorkLocation] = useState("");
+  const [savingPlace, setSavingPlace] = useState(false);
 
   async function refresh(id) {
     const [companies, staff, report] = await Promise.all([getEmployers(), getEmployees(id), getSummary(id)]);
-    setEmployer(companies.find((item) => item.id === Number(id)) || null);
+    const company = companies.find((item) => item.id === Number(id)) || null;
+    setEmployer(company);
+    setWorkLocation(company?.work_location || "");
     setEmployees(staff);
     setSummary(report);
   }
@@ -140,6 +144,43 @@ export default function StaffDesk({ employerId }) {
           <p className="text-xs uppercase tracking-[0.18em] text-clay">Employer</p>
           <h1 className="font-display text-4xl">{employer?.company_name || "Company"}</h1>
           <p className="text-sm text-ink/60">{employer?.contact_email}</p>
+          <form
+            className="mt-3 flex flex-wrap items-end gap-2"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (!employer) return;
+              setSavingPlace(true);
+              setError("");
+              setNotice("");
+              try {
+                const updated = await updateEmployer(employer.id, { work_location: workLocation.trim() });
+                setEmployer(updated);
+                setWorkLocation(updated.work_location || "");
+                setNotice(
+                  updated.work_latitude
+                    ? "Workplace saved. Homes are suggested closer to it."
+                    : "That address was saved, but it could not be placed on a map."
+                );
+              } catch (err) {
+                setError(err.message);
+              } finally {
+                setSavingPlace(false);
+              }
+            }}
+          >
+            <label className="text-xs text-ink/60">
+              Workplace
+              <input
+                required
+                className="mt-1 w-80 max-w-full rounded-xl border border-sand bg-white px-3 py-2 text-sm text-ink"
+                value={workLocation}
+                onChange={(event) => setWorkLocation(event.target.value)}
+              />
+            </label>
+            <button className="rounded-full border border-ink px-4 py-2 text-sm" disabled={savingPlace}>
+              {savingPlace ? "Saving…" : "Save workplace"}
+            </button>
+          </form>
         </div>
       </div>
 

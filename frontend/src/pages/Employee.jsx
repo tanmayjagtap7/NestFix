@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { affordability, api, bedsLabel, generateOptions, getOptions, money, plainTalk, selectOption, updateEmployee } from "../api";
 import MapFrame from "../components/MapFrame";
-import NearbyPlaces from "../components/NearbyPlaces";
+import PropertyPhotos from "../components/PropertyPhotos";
 import PriceSplit, { helpLine } from "../components/PriceSplit";
 
 const BILL_FIELDS = [
@@ -22,6 +22,13 @@ const EMPTY_BILLS = {
   savings: "400",
   take_home_ratio: "0.75",
 };
+
+function milesFromWork(place, orgName) {
+  const miles = Number(place?.miles_from_work);
+  if (!Number.isFinite(miles) || miles > 80) return "";
+  const shown = miles < 10 ? miles.toFixed(1) : String(Math.round(miles));
+  return `${shown} miles from ${orgName || "the office"}`;
+}
 
 function homeType(value) {
   if (!value) return "";
@@ -267,6 +274,7 @@ export default function Employee() {
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-clay">{employee.preferred_city}</p>
               <h1 className="font-display text-4xl">{employee.full_name}</h1>
+              {employee.work_location && <p className="mt-1 text-sm text-ink/65">Work · {employee.work_location}</p>}
             </div>
             <button className="rounded-full border border-ink px-4 py-2 text-sm disabled:opacity-50" onClick={onGenerate} disabled={loading}>
               {loading ? "Searching…" : data.options?.length ? "Refresh homes" : "Find homes"}
@@ -356,6 +364,9 @@ export default function Employee() {
                       {option.sqft ? ` · ${Math.round(option.sqft).toLocaleString()} sq ft` : ""}
                       {homeType(place.home_type) ? ` · ${homeType(place.home_type)}` : ""}
                     </p>
+                    {milesFromWork(place, employee.employer_name) && (
+                      <p className="mt-1 text-sm text-pine">{milesFromWork(place, employee.employer_name)}</p>
+                    )}
                     <div className="mt-4">
                       <p className="text-xs uppercase tracking-wider text-ink/45">You pay each month</p>
                       <p className="font-display text-4xl">{money(option.net_price)}</p>
@@ -401,13 +412,8 @@ export default function Employee() {
                     </div>
                   </div>
                   <div className="border-t border-sand p-3 lg:border-l lg:border-t-0">
-                    <MapFrame address={option.address} lat={place.latitude} lng={place.longitude} className="h-56" />
-                    <NearbyPlaces
-                      amenities={option.amenities_data}
-                      lat={place.latitude}
-                      lng={place.longitude}
-                      className="mt-3"
-                    />
+                    <PropertyPhotos compact optionId={option.id} listing={place} />
+                    <MapFrame address={option.address} lat={place.latitude} lng={place.longitude} className="mt-3 h-56" />
                   </div>
                 </div>
               </article>

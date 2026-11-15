@@ -1,8 +1,86 @@
 # Nestfix
 
-Nestfix helps an employer put money toward housing and show each employee real rentals they can afford after that help. Listings come from Bright Data. Explanations come from Gemini when the key is accepted.
+[![NestFix — Helping employees find home, helping employers keep talent](info/image.jpg)](info/NestFix_Intro_v2.mp4)
+
+[Watch the intro](info/NestFix_Intro_v2.mp4)
+
+Nestfix helps an employer put money toward housing and show each employee real rentals they can afford after that help. Listings come from Bright Data. Explanations come from Gemini.
 
 The demo company is Harborlight Logistics. Five employees are loaded on first run. There is no password. Pick the employer desk or an employee view.
+
+## Inspiration
+
+NestFix started from a real tradeoff: live close to work, or live somewhere the rent fits. Near the job, a typical home can run about $3,200 a month. Farther out, rent drops toward $2,100, and the commute stretches toward an hour. NestFix is how an employer helps someone have both.
+
+Harborlight Logistics is the story we built around. The company already knows what it is willing to pay toward housing. The employee still has to find a real place, see what they would actually pay after that help, and know whether the house is close to the office.
+
+## What it does
+
+NestFix is the desk for that decision. An employer adds a company, a workplace, and the people they want to keep, including how much housing help each person gets. An employee opens their own page and sees live rentals in that city, ordered so homes closer to the office come first when the rent still fits.
+
+Each home shows the listed rent, what the company pays, and what is left:
+
+\[
+\text{net} = \text{listed rent} - \text{employer help}
+\]
+
+Help can be a monthly amount, a one-time grant spread over the year, or a percent of the rent. The card also shows photos of that home, a map, and the miles from the workplace. The longer page adds schools, hospitals, and transit, plus a box to ask about the home. The employer sees who has chosen a place, and what the company would pay.
+
+## How we built it
+
+NestFix is an app, built using FastAPI and SQLite that holds the company, the people, and the homes they have reviewed. React, Vite, and Tailwind are the desk they use. There is no login. An employer opens their team. An employee opens their own homes.
+
+On first run the database loads Harborlight and five people in Austin, where the office is: 2100 E St Elmo Rd. Each person has a salary, a household, a commute limit, and a kind of help.
+
+Finding homes calls Bright Data’s Zillow datasets for live rentals and Google Maps datasets for schools, parks, hospitals, and transit. Gemini writes the pros, cons, and the plain-language note for that specific person. Follow-up questions about a store or a school reuse a saved place when we already have it, and otherwise look it up and answer with the name, the address, and the miles.
+
+Photos come from the listing itself. The listing card stays to the photo, the map, the price split, and the miles from the office. Nearby schools, hospitals, and transit stay on the detail page. The employer can change the workplace, and the next search prefers homes closer to that address.
+
+## Challenges we ran into
+
+Listing pages are collected as a dataset job. The photos, price, and address are ready when that job finishes, so the app keeps the same snapshot and reads it when the records are there.
+
+A question about a grocery store or a school needs a name, an address, and the miles from the home. Those answers are saved and reused.
+
+The gallery uses the listing’s own photos of the house. Schools, hospitals, and transit stay on the detail page.
+
+Refreshing homes keeps earlier questions from blocking the new list. The workplace is stored on the company, and homes that fit the budget are ordered by miles from that office.
+
+## Accomplishments that we're proud of
+
+The number on the card is the rent a person would actually pay after the company helps. Three different kinds of employer help all land in that same split, and the company’s fixed monthly commitment adds up in the open:
+
+\[
+600 + 800 + \frac{4800}{12} + 1000 = 2800
+\]
+
+Maya, Priya, Luis, and Amina. Jordan’s 15 percent of rent sits on top of that once a home is chosen.
+
+The homes are real listings, with the listing’s own photos, and they are ordered by distance to a workplace the employer can edit. Asking “how far is the closest grocery store?” comes back with a name, an address, and the miles. The same app is the employer desk, the employee desk, and the admin page for a new company.
+
+## What we learned
+
+A subsidy is not one number. A monthly amount is that amount. One-time help has to be spread across the months it is meant to cover. A percent of rent cannot be totaled until a home is chosen, because it depends on the rent.
+
+We also kept the usual housing guideline, 30 percent of gross monthly pay:
+
+\[
+\text{budget} = 0.30 \times \frac{\text{annual salary}}{12}
+\]
+
+Distance to the workplace is the other half of the decision. With the office and the house both on a map, miles come from the haversine formula, where \(R\) is the Earth’s radius and \(\phi, \lambda\) are latitude and longitude:
+
+\[
+d = 2R \arcsin\sqrt{\sin^2\left(\frac{\Delta\phi}{2}\right) + \cos\phi_1\cos\phi_2\sin^2\left(\frac{\Delta\lambda}{2}\right)}
+\]
+
+Homes that still fit the budget are then ordered by that distance. For Maya, 5808 Ann Jene Ct is about 1.4 miles from Harborlight. Another house in Austin can be 17 miles from the same office. The budget can match while the commute does not.
+
+## What's next for NestFix
+
+The next step is a drive time from each house to the office, so a highway route and a city route can be compared on the clock.
+
+A company should also be able to keep more than one workplace, and each person should be matched to the site they actually work at. After that: a sign-in so each employee only sees their own desk, and a map on the employer page of who can live within the commute they asked for.
 
 ## Setup
 
@@ -46,23 +124,6 @@ npm run dev
 
 Open http://127.0.0.1:5173. API docs are at http://127.0.0.1:8000/docs.
 
-## Demo script
-
-Use this order with judges. Live collection usually takes one to three minutes. Start it, then talk.
-
-1. Open the home page. Point at the three steps and the Harborlight card.
-2. Open **Employer**. Show the five staff rows and the contribution column. Maya Chen is a $600 monthly subsidy. Jordan Hale is 15% of rent. Luis Ortega is one-time assistance spread over 12 months.
-3. Optional: upload `sample_employees.csv` (also linked on the page) to show the CSV path. Re-uploading updates the same employee ids.
-4. Click **Find homes** on Maya Chen (`HL-1042`, Austin, family of 3, toddler, 2 bedrooms). Leave the loading note on screen. Bright Data is collecting Zillow rentals and Google Maps places.
-5. When the row says homes are ready, click **Open their view**.
-6. On Maya’s page, start on **Net price**. The large number is rent after Harborlight’s subsidy. Switch on **Show employer contribution** and point at sticker, employer share, and net.
-7. Read the “why this fits” line out loud. It should name Maya, Austin, her household, and the subsidy. Pros and cons sit under it. Schools, walk score, or parks come from the Bright Data record.
-8. Open **Open listing source** so the room can see the live Zillow page.
-9. In the affordability panel, set other monthly expenses to `3200` and desired savings to `700`. Click **Apply to rankings**. Homes that no longer fit drop down and are marked over budget. Rank labels show the move (`#2 · was #1`). Check **Hide homes over this budget** to filter.
-10. Select a home and add a short note, for example “Close to a park for the toddler.”
-11. Return to **Employer** and show **What staff selected**: address, sticker, employer share, and net.
-12. If there is time, open Priya Nair (`HL-1180`, Denver, two children, $800 subsidy) and generate her list. Her notes ask for an elementary school, which is the amenity beat.
-
 ## Bright Data
 
 Nestfix calls Bright Data in this order:
@@ -76,15 +137,13 @@ Nestfix calls Bright Data in this order:
 
 Calls are logged on the employee page under **Show Bright Data and Gemini log**, and in the `analysis_logs` table.
 
-The token shipped with this project can call the datasets API. It has no SERP or Web Unlocker zone, and it cannot create zones. With that token, step 3 is the live path. Add zone names to `.env` to switch the search over to SERP and Web Unlocker.
+This project collects listings through the datasets API. Add zone names to `.env` to also use SERP and Web Unlocker.
 
 ## Gemini
 
 `app/services/gemini_service.py` sends the employee (name, salary, family, city, contribution, notes) and the Bright Data rows. It asks for JSON: score, pros, cons, why this fits, an affordability paragraph, and a neighborhood summary. The affordability calculator asks Gemini for a short narrative as well.
 
-The value originally placed in `GEMINI_API_KEY` was the Bright Data token, which Google rejects. Nestfix still calls Gemini on every generation. If Google rejects the key, the screen says so and shows match notes calculated from the live rent, the employer contribution, and that employee’s salary and household. Those notes are labeled as calculated, not as Gemini. Paste the AI Studio key (the one that starts with `AQ.`) into `.env` and click **Refresh live homes** to replace them.
-
-Model default is `gemini-3.5-flash`. If that model is busy, Nestfix tries `gemini-3.5-flash-lite`, then `gemini-flash-lite-latest`. Override with `GEMINI_MODEL`.
+Model default is `gemini-3.5-flash`. Nestfix can also try `gemini-3.5-flash-lite`, then `gemini-flash-lite-latest`. Override with `GEMINI_MODEL`.
 
 ## API
 

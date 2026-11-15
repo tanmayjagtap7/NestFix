@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.models import AnalysisLog, Employee, EmployeeSelection, HousingOption
+from app.models import AnalysisLog, Employee, EmployeeSelection, HousingOption, HousingQuestion
 from app.services.affordability import (
     contribution_label,
     employer_monthly_cover,
@@ -16,6 +16,7 @@ from app.services.affordability import (
     sticker_search_cap,
 )
 from app.services.bright_data_service import BrightDataError, BrightDataService
+from app.services.geo import distance_miles
 from app.services.gemini_service import GeminiError, GeminiService
 
 logger = logging.getLogger("nestfix.matching")
@@ -65,6 +66,14 @@ def generate_options_for_employee(db: Session, employee: Employee) -> Dict[str, 
     if not listings:
         raise BrightDataError(f"No rentals came back for {employee.preferred_city}. Try again.")
 
+    office = employee.employer
+    for item in listings:
+        item["miles_from_work"] = distance_miles(
+            office.work_latitude if office is not None else None,
+            office.work_longitude if office is not None else None,
+            item.get("latitude"),
+            item.get("longitude"),
+        )
     chosen = _choose(listings, employee, budget)[:5]
     for item in chosen:
         price = item.get("price")
@@ -116,6 +125,17 @@ def generate_options_for_employee(db: Session, employee: Employee) -> Dict[str, 
     shared_amenities["summary_source"] = source if source == "gemini" else "bright_data"
 
     saved: List[HousingOption] = []
+    old_ids = [
+        row[0]
+        for row in db.query(HousingOption.id).filter(HousingOption.employee_id == employee.id).all()
+    ]
+    if old_ids:
+        db.query(HousingQuestion).filter(HousingQuestion.housing_option_id.in_(old_ids)).delete(
+            synchronize_session=False
+        )
+        db.query(EmployeeSelection).filter(EmployeeSelection.housing_option_id.in_(old_ids)).delete(
+            synchronize_session=False
+        )
     db.query(EmployeeSelection).filter(EmployeeSelection.employee_id == employee.id).delete()
     db.query(HousingOption).filter(HousingOption.employee_id == employee.id).delete()
 
@@ -142,6 +162,7 @@ def generate_options_for_employee(db: Session, employee: Employee) -> Dict[str, 
                 "provider": item.get("provider"),
                 "home_type": item.get("home_type"),
                 "image_url": item.get("image_url"),
+                "image_urls": item.get("image_urls") or [],
                 "description": item.get("description"),
                 "title": item.get("title"),
                 "latitude": item.get("latitude"),
@@ -151,6 +172,7 @@ def generate_options_for_employee(db: Session, employee: Employee) -> Dict[str, 
                 "sticker_cap": cap,
                 "transit": item.get("transit") or [],
                 "neighborhoods": item.get("neighborhoods") or [],
+                "miles_from_work": item.get("miles_from_work"),
             },
             amenities_data=_amenities_for_listing(item, shared_amenities),
             gemini_analysis=analysis,
@@ -207,6 +229,7 @@ def _listings_for_city(db: Session, city: str) -> Dict[str, Any]:
                 "sqft": option.sqft,
                 "home_type": data.get("home_type"),
                 "image_url": data.get("image_url"),
+                "image_urls": data.get("image_urls") or [],
                 "description": data.get("description"),
                 "title": data.get("title"),
                 "latitude": data.get("latitude"),
@@ -345,6 +368,7 @@ def employee_context(employee: Employee, budget: float) -> Dict[str, Any]:
         "other_notes": employee.other_notes,
         "contribution": contribution_label(employee),
         "employer": employee.employer.company_name if employee.employer else None,
+        "workplace": employee.employer.work_location if employee.employer else None,
     }
 
 
@@ -369,10 +393,12 @@ def _choose(listings: List[Dict[str, Any]], employee: Employee, budget: float) -
             employee.contribution_duration_months,
         )
         bed_rank = 0 if beds >= need else 1
+        miles = item.get("miles_from_work")
+        close = miles if isinstance(miles, (int, float)) and miles <= 80 else 10**6
         if net is None:
-            return (bed_rank, 2, 10**9, 0)
+            return (bed_rank, 2, close, 10**9, 0)
         over = 0 if net <= budget * 1.08 else 1
-        return (bed_rank, over, abs(net - budget), -beds)
+        return (bed_rank, over, close, abs(net - budget), -beds)
 
     unique.sort(key=sort_key)
     by_address: Dict[str, List[Dict[str, Any]]] = {}
@@ -483,7 +509,14 @@ def _local_analysis(
     parks = amenities.get("parks") or []
     if parks:
         pros.append(f"Nearby park: {parks[0].get('name')}.")
-    if employee.max_commute_minutes:
+    miles = listing.get("miles_from_work")
+    if isinstance(miles, (int, float)) and miles <= 150:
+        sentence = f"About {miles:g} miles from the workplace."
+        if miles <= 12:
+            pros.append(sentence)
+        else:
+            cons.append(sentence)
+    elif employee.max_commute_minutes:
         cons.append(f"Commute was not measured. The request was to stay under {employee.max_commute_minutes} minutes.")
 
     child_word = "child" if (employee.num_children or 0) == 1 else "children"

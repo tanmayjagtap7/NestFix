@@ -10,6 +10,7 @@ from app.routers.employees import _load, _options_response, _option_out
 from app.schemas import GenerateResponse, HousingOptionOut, QuestionIn, QuestionOut
 from app.services.bright_data_service import BrightDataError
 from app.services.matching_service import generate_options_for_employee
+from app.services.photos import property_photos
 from app.services.questions import answer_about_option
 
 router = APIRouter()
@@ -35,6 +36,16 @@ def generate_options(employee_id: str, db: Session = Depends(get_db)) -> Generat
     payload["analysis_source"] = result["analysis_source"]
     payload["gemini_error"] = result["gemini_error"]
     return GenerateResponse(**payload)
+
+
+@router.get("/options/{option_id}/photos")
+def list_photos(option_id: int, db: Session = Depends(get_db)) -> dict:
+    option = _option_or_404(db, option_id)
+    try:
+        return property_photos(db, option)
+    except Exception:
+        logger.exception("Photo lookup failed")
+        return {"photos": [], "pending": False}
 
 
 @router.get("/options/{option_id}/questions", response_model=List[QuestionOut])

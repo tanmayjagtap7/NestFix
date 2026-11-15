@@ -45,7 +45,6 @@ export default function Admin() {
                 onClick={() => setSelected(item.id)}
               >
                 <span className="block font-medium">{item.company_name}</span>
-                <span className={`block text-xs ${selected === item.id ? "text-paper/70" : "text-ink/50"}`}>{item.contact_email}</span>
               </button>
             ))}
           </div>
