@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.db
+place_cache.json
+.pytest_cache/
+frontend/node_modules/
+frontend/dist/
+.DS_Store
